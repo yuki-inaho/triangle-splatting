@@ -7,7 +7,7 @@
 - **プロジェクト名称・領域:** Triangle Splatting for Real-Time Radiance Field Rendering
 - **最終成果物:** Blackwell GPU / CUDA 13.0 ドライバ環境上で、pixi による再現可能な学習・レンダリング検証環境を整備する。
 - **ビジネス背景・価値:** 3D Gaussian Splatting 系の派生手法を、手元の RTX PRO 4000 Blackwell 環境で比較・検証できる状態にする。
-- **現時点の進捗サマリ:** `work/pixi-pr7-pr47` ブランチで upstream PR #7 と PR #47 を取り込み、pixi 環境・CUDA extension build・501枚データの smoke 学習まで確認済み。
+- **現時点の進捗サマリ:** `work/pixi-pr7-pr47` ブランチで upstream PR #7 と PR #47 を取り込み、pixi 環境・CUDA extension build・501枚データの smoke 学習、30k 学習、PSNR 評価、PLY/SPZ export まで確認済み。
 
 ## 2. クリティカルな要求・制約
 
@@ -18,6 +18,7 @@
 - `simple-knn` の元 GitLab submodule URL は取得不能だったため、GitHub mirror `https://github.com/camenduru/simple-knn.git` を使う。
 - PR #47 の `diff-triangle-rasterization` submodule pointer `62bbc103...` は upstream から fetch 不能だったため、公式 `6d61f4c...` に戻し、build 時だけ `#include <cstdint>` workaround を適用する。
 - Blackwell GPU では PyTorch `2.8.0+cu128` と pixi の CUDA 12.8 nvcc を使う。ドライバ表示は CUDA 13.0 でも、toolchain は CUDA 12.8 で固定している。
+- `scripts/export_ply_spz.py` の SPZ は Triangle Splatting の三角形を直接格納するものではなく、1 triangle を 1 Gaussian に近似した SPZ v3 である。品質確認時は Triangle PLY と近似 Gaussian/SPZ を混同しない。
 
 ## 3. 参照すべき合意済み資料
 
@@ -30,9 +31,14 @@
 | CUDA 環境設定 | `scripts/pixi-cuda-env.sh` | `CUDA_HOME`, include/lib path, `TORCH_CUDA_ARCH_LIST=12.0+PTX` の設定 |
 | extension build | `scripts/install_diff_triangle.sh` | `diff-triangle-rasterization` の一時 cstdint patch と pip install |
 | 検証スクリプト | `scripts/verify_environment.py` | package、CUDA、nvcc、extension import の確認 |
+| export スクリプト | `scripts/export_ply_spz.py` | 30k checkpoint から Triangle PLY、近似 Gaussian PLY、SPZ v3、manifest を生成 |
+| export manifest | `outputs/tva_0501_gluemap_aba_30k_20260615T073840Z/exports/iteration_30000/export_manifest_it30000.json` | 生成物のパス、件数、検証結果、実行時間。`outputs/` 配下のため commit 対象外 |
 | 取り込みPR | https://github.com/trianglesplatting/triangle-splatting/pull/7 | `create_ply.py` の追加 |
 | 取り込みPR | https://github.com/trianglesplatting/triangle-splatting/pull/47 | CUDA build fix 系の提案。submodule pointer はそのまま再現不可 |
 | 既知課題 | https://github.com/graphdeco-inria/gaussian-splatting/issues/265 | `simple-knn` GitLab URL 取得不能に関する関連 issue |
+| SPZ / PLY 仕様 | https://developer.playcanvas.com/user-manual/splat-transform/ | PlayCanvas SplatTransform。Gaussian PLY/SPZ 前提 |
+| SPZ 既知課題 | https://github.com/nianticlabs/spz/issues/12 | PLY -> SPZ 変換時の色・回転・量子化品質差の報告 |
+| SPZ 既知課題 | https://github.com/nianticlabs/spz/issues/19 | Niantic `loadSplatFromPly` の PLY comment handling に関する報告 |
 
 ## 4. タスク境界（任せること / 任せないこと）
 
@@ -40,6 +46,7 @@
 
 - pixi 環境の再構築、`pixi run verify` / `pixi run smoke` の再実行。
 - 501枚データを使った短時間 smoke 学習と、保存モデルの読み戻し確認。
+- 30k checkpoint から `scripts/export_ply_spz.py` を使った PLY/SPZ 再生成と manifest 検証。
 - 生成物を commit 対象から除外しつつ、必要な scripts/docs/config のみを commit する。
 
 ### 任せないタスク
@@ -86,6 +93,14 @@ pixi run install-extensions
 pixi run smoke
 ```
 
+- **30k PLY/SPZ export コマンド:**
+
+```bash
+pixi run python scripts/export_ply_spz.py \
+  --model-path outputs/tva_0501_gluemap_aba_30k_20260615T073840Z \
+  --iteration 30000
+```
+
 - **501枚 smoke 学習コマンド:**
 
 ```bash
@@ -99,5 +114,8 @@ pixi run python train.py \
 ```
 
 - **確認済み smoke 結果:** 2026-06-15 に 20 iterations が成功。保存モデルは `triangles_points (52500, 3, 3)` として読み戻し確認済み。
+- **確認済み 30k 評価:** 2026-06-15 に 30,000 iterations が成功。`results.json` の `ours_30000` は PSNR `23.405052185058594`, SSIM `0.7570990324020386`, LPIPS `0.21464811265468597`。
+- **確認済み 30k export:** 2026-06-15 に `scripts/export_ply_spz.py` で生成成功。Triangle PLY は `vertex=5988228`, `face=1996076`、近似 Gaussian PLY は `vertex=1996076`、SPZ は `points=1996076`, `sh_degree=3`, `fractional_bits=8`, `position_values_clipped=0`。
+- **Desktop コピー:** 30k export の PLY/SPZ/manifest は `/home/kasm-user/Desktop/tva_0501_triangle_splatting_30k_export/` にコピー済み。
 - **依存ライブラリ:** PyTorch `2.8.0+cu128`, torchvision `0.23.0+cu128`, numpy `1.26.4`, Open3D `0.18.0`, lpips `0.1.4`, mediapy `1.2.6`, opencv-python `4.11.0`。
 - **連絡先/責任者:** TBD
