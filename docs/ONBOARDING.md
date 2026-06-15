@@ -32,6 +32,7 @@
 | extension build | `scripts/install_diff_triangle.sh` | `diff-triangle-rasterization` の一時 cstdint patch と pip install |
 | 検証スクリプト | `scripts/verify_environment.py` | package、CUDA、nvcc、extension import の確認 |
 | export スクリプト | `scripts/export_ply_spz.py` | 30k checkpoint から Triangle PLY、近似 Gaussian PLY、SPZ v3、manifest を生成 |
+| COLMAP軌跡レンダリング | `scripts/render_colmap_trajectory_video.py` | 元COLMAPカメラ列を画像名順にレンダリングし、mp4 と frame manifest を生成 |
 | export manifest | `outputs/tva_0501_gluemap_aba_30k_20260615T073840Z/exports/iteration_30000/export_manifest_it30000.json` | 生成物のパス、件数、検証結果、実行時間。`outputs/` 配下のため commit 対象外 |
 | 取り込みPR | https://github.com/trianglesplatting/triangle-splatting/pull/7 | `create_ply.py` の追加 |
 | 取り込みPR | https://github.com/trianglesplatting/triangle-splatting/pull/47 | CUDA build fix 系の提案。submodule pointer はそのまま再現不可 |
@@ -101,6 +102,16 @@ pixi run python scripts/export_ply_spz.py \
   --iteration 30000
 ```
 
+- **30k COLMAP元軌跡レンダリング + 動画化コマンド:**
+
+```bash
+pixi run python scripts/render_colmap_trajectory_video.py \
+  --model_path outputs/tva_0501_gluemap_aba_30k_20260615T073840Z \
+  --iteration 30000 \
+  --camera_set all \
+  --fps 30
+```
+
 - **501枚 smoke 学習コマンド:**
 
 ```bash
@@ -116,6 +127,7 @@ pixi run python train.py \
 - **確認済み smoke 結果:** 2026-06-15 に 20 iterations が成功。保存モデルは `triangles_points (52500, 3, 3)` として読み戻し確認済み。
 - **確認済み 30k 評価:** 2026-06-15 に 30,000 iterations が成功。`results.json` の `ours_30000` は PSNR `23.405052185058594`, SSIM `0.7570990324020386`, LPIPS `0.21464811265468597`。
 - **確認済み 30k export:** 2026-06-15 に `scripts/export_ply_spz.py` で生成成功。Triangle PLY は `vertex=5988228`, `face=1996076`、近似 Gaussian PLY は `vertex=1996076`、SPZ は `points=1996076`, `sh_degree=3`, `fractional_bits=8`, `position_values_clipped=0`。
+- **確認済み 30k COLMAP元軌跡動画:** 2026-06-15 に `scripts/render_colmap_trajectory_video.py --camera_set all --fps 30 --save_gt` で生成成功。render/gt ともに `501` フレーム、mp4 は h264 `800x600`, `30fps`, `16.7s`。出力は `outputs/tva_0501_gluemap_aba_30k_20260615T073840Z/colmap_traj/all_ours_30000/render_colmap_all_color.mp4`。
 - **Desktop コピー:** 30k export の PLY/SPZ/manifest は `/home/kasm-user/Desktop/tva_0501_triangle_splatting_30k_export/` にコピー済み。
 - **依存ライブラリ:** PyTorch `2.8.0+cu128`, torchvision `0.23.0+cu128`, numpy `1.26.4`, Open3D `0.18.0`, lpips `0.1.4`, mediapy `1.2.6`, opencv-python `4.11.0`。
 - **連絡先/責任者:** TBD

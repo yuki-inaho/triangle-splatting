@@ -161,6 +161,7 @@ cython_debug/
 data/
 outputs/
 logs/
+temp/
 
 # PyCharm
 #  JetBrains specific template is maintained in a separate JetBrains.gitignore that can
