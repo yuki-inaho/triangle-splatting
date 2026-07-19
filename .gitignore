@@ -154,6 +154,15 @@ dmypy.json
 # Cython debug symbols
 cython_debug/
 
+# Pixi / local runtime state
+.pixi/
+
+# Project runtime artifacts
+data/
+outputs/
+logs/
+temp/
+
 # PyCharm
 #  JetBrains specific template is maintained in a separate JetBrains.gitignore that can
 #  be found at https://github.com/github/gitignore/blob/main/Global/JetBrains.gitignore

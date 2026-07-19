@@ -1,0 +1,48 @@
+[workspace]
+name = "triangle-splatting"
+description = "Pixi environment for Triangle Splatting on Blackwell/CUDA 12.8"
+channels = ["https://conda.anaconda.org/nvidia/label/cuda-12.8.0", "nvidia", "conda-forge", "pytorch"]
+platforms = ["linux-64"]
+
+[activation]
+scripts = ["scripts/pixi-cuda-env.sh"]
+
+[system-requirements]
+cuda = "12"
+libc = { family = "glibc", version = "2.30" }
+
+[dependencies]
+python = "3.11.*"
+pip = ">=24,<27"
+setuptools = ">=69,<80"
+wheel = ">=0.43,<1"
+ninja = ">=1.11,<2"
+numpy = "1.26.4.*"
+pillow = ">=10,<13"
+matplotlib = ">=3.8,<4"
+scipy = ">=1.11,<2"
+scikit-image = ">=0.22,<1"
+scikit-learn = ">=1.4,<2"
+imageio = ">=2.34,<3"
+cuda-nvcc = "12.8.61.*"
+cuda-nvrtc-dev = "12.8.61.*"
+cuda-cudart-dev = "12.8.57.*"
+
+[pypi-dependencies]
+torch = { version = "==2.8.0+cu128", index = "https://download.pytorch.org/whl/cu128" }
+torchvision = { version = "==0.23.0+cu128", index = "https://download.pytorch.org/whl/cu128" }
+tqdm = ">=4.66"
+plyfile = ">=1.0"
+open3d = ">=0.18"
+lpips = ">=0.1.4"
+mediapy = ">=1.2"
+opencv-python = ">=4.9"
+
+[tasks]
+submodules = "git submodule sync --recursive && git submodule update --init --recursive"
+patch-diff-triangle = { cmd = "bash scripts/patch_diff_triangle_cstdint.sh", depends-on = ["submodules"] }
+install-diff-triangle = { cmd = "TORCH_CUDA_ARCH_LIST=8.9 bash scripts/install_diff_triangle.sh", depends-on = ["submodules"] }
+install-simple-knn = { cmd = "python -c \"import shutil; shutil.rmtree('submodules/simple-knn/build', ignore_errors=True)\" && TORCH_CUDA_ARCH_LIST=8.9 python -m pip install --force-reinstall --no-build-isolation ./submodules/simple-knn", depends-on = ["submodules"] }
+install-extensions = { cmd = "python -c \"import diff_triangle_rasterization, simple_knn._C; print('extensions ok')\"", depends-on = ["install-diff-triangle", "install-simple-knn"] }
+verify = "python scripts/verify_environment.py"
+smoke = { cmd = "python scripts/verify_environment.py --extensions", depends-on = ["install-extensions"] }

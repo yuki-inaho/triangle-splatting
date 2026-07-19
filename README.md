@@ -41,6 +41,17 @@ Then, we suggest to use a virtual environment to install the dependencies.
 micromamba create -f requirements.yaml
 ```
 
+Alternatively, this checkout includes a pixi environment for Linux CUDA 12.8 / Blackwell machines:
+
+```bash
+pixi install
+pixi run verify
+pixi run install-extensions
+pixi run smoke
+```
+
+The pixi extension build applies the `#include <cstdint>` workaround from PR #47 while compiling `diff-triangle-rasterization`, then restores the submodule working tree. This checkout also points `simple-knn` at a GitHub mirror because the original GitLab submodule URL is not reliably fetchable.
+
 Finally, you can compile the custom CUDA kernels by running the following command:
 
 ```bash
@@ -48,6 +59,11 @@ bash compile.sh
 cd submodules/simple-knn
 pip install .
 ```
+
+> **Note:** If `nvcc` reports an unsupported host compiler version, point it at a `g++` that your CUDA toolkit supports before running `compile.sh`, e.g.:
+> ```bash
+> export NVCC_CCBIN=/usr/bin/g++-14   # match a GCC version supported by your CUDA toolkit
+> ```
 
 ## Training
 To train our model, you can use the following command:
@@ -132,4 +148,3 @@ title={3D Convex Splatting: Radiance Field Rendering with 3D Smooth Convexes},
 This project is built upon 3D Convex Splatting and 3D Gaussian Splatting. We want to thank the authors for their contributions.
 
 J. Held and A. Cioppa are funded by the F.R.S.-FNRS. The research reported in this publication was supported by funding from KAUST Center of Excellence on GenAI, under award number 5940. This work was also supported by KAUST Ibn Rushd Postdoc Fellowship program. The present research benefited from computational resources made available on Lucia, the Tier-1 supercomputer of the Walloon Region, infrastructure funded by the Walloon Region under the grant agreement n°1910247.
-
