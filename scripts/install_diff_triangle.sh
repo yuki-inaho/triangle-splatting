@@ -6,6 +6,7 @@ patched_files=(
     "cuda_rasterizer/rasterizer_impl.h"
     "cuda_rasterizer/forward.h"
     "cuda_rasterizer/backward.h"
+    "cuda_rasterizer/forward.cu"
 )
 
 restore_patch() {
@@ -17,4 +18,5 @@ restore_patch() {
 trap restore_patch EXIT
 
 bash scripts/patch_diff_triangle_cstdint.sh
-python -m pip install --no-build-isolation "./${submodule_dir}"
+bash scripts/patch_diff_triangle_binning_guard.sh
+python -m pip install --force-reinstall --no-build-isolation "./${submodule_dir}"
