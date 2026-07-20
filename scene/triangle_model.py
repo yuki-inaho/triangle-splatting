@@ -682,7 +682,16 @@ class TriangleModel:
         probs = torch.nan_to_num(probs, nan=0.0, posinf=0.0, neginf=0.0)
         probs = torch.clamp(probs, min=0.0)
         probs = probs / (probs.sum() + torch.finfo(torch.float32).eps)
-        sampled_idxs = torch.multinomial(probs, min(num, (probs>0).sum().item()), replacement=False)
+        num = int(num.item()) if torch.is_tensor(num) else int(num)
+        sample_count = min(num, int((probs > 0).sum().item()))
+
+        # A pruning round can leave no finite, positive sampling weights.  In
+        # that case there is nothing to clone or split; return an empty index
+        # set and let add_new_gs prune the dead triangles normally.
+        if sample_count <= 0:
+            return torch.empty(0, dtype=torch.long, device=probs.device)
+
+        sampled_idxs = torch.multinomial(probs, sample_count, replacement=False)
 
         if alive_indices is not None:
             sampled_idxs = alive_indices[sampled_idxs]
@@ -728,7 +737,7 @@ class TriangleModel:
         target_num = min(cap_max, int(self.add_shape * current_num_points))
         num_gs = max(0, target_num - current_num_points)
 
-        num_gs += dead_mask.sum()
+        num_gs += int(dead_mask.sum().item())
 
         if num_gs <= 0:
             return 0
@@ -746,6 +755,13 @@ class TriangleModel:
         big_mask   = compar > self.split_size
 
         add_idx = self._sample_alives(probs=probs, num=num_gs, big_mask=big_mask)
+
+        # If every surviving sampling weight is invalid or zero, this round
+        # cannot create replacements.  Skipping the whole round also prevents
+        # pruning every triangle and leaving the rasterizer with an empty
+        # model on large-camera datasets.
+        if add_idx.numel() == 0:
+            return 0
 
         big_mask   = compar[add_idx] > self.split_size
         small_mask = ~big_mask
@@ -808,6 +824,13 @@ class TriangleModel:
         self.importance_score = torch.zeros((self.get_triangles_points.shape[0]), device="cuda")
 
     def remove_final_points(self, mask):
+        # Coverage statistics can mark every triangle as dead when one
+        # densification interval spans fewer views than the dataset contains.
+        # Keep the current model instead of producing an empty tensor set that
+        # the CUDA rasterizer cannot render.
+        if mask.numel() == 0 or bool(mask.all().item()):
+            return 0
+
         self.prune_points(mask)
         self.triangle_area = torch.zeros((self.get_triangles_points.shape[0]), device="cuda")
         self.image_size = torch.zeros((self.get_triangles_points.shape[0]), device="cuda")

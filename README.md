@@ -41,7 +41,7 @@ Then, we suggest to use a virtual environment to install the dependencies.
 micromamba create -f requirements.yaml
 ```
 
-Alternatively, this checkout includes a pixi environment for Linux CUDA 12.8 / Blackwell machines:
+Alternatively, this checkout includes a pixi environment for Linux CUDA 12.8 systems:
 
 ```bash
 pixi install
@@ -51,6 +51,8 @@ pixi run smoke
 ```
 
 The pixi extension build applies the `#include <cstdint>` workaround from PR #47 while compiling `diff-triangle-rasterization`, then restores the submodule working tree. This checkout also points `simple-knn` at a GitHub mirror because the original GitLab submodule URL is not reliably fetchable.
+The activation script detects the local GPU compute capability for the extension build; set
+`TORCH_CUDA_ARCH_LIST` explicitly when cross-compiling or overriding that choice.
 
 Finally, you can compile the custom CUDA kernels by running the following command:
 

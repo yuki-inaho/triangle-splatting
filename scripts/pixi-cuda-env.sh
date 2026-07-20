@@ -13,5 +13,14 @@ if [ -n "${CONDA_PREFIX:-}" ]; then
     fi
 fi
 
-export TORCH_CUDA_ARCH_LIST="${TORCH_CUDA_ARCH_LIST:-12.0+PTX}"
+if [ -z "${TORCH_CUDA_ARCH_LIST:-}" ]; then
+    detected_compute_capability=""
+    if command -v nvidia-smi >/dev/null 2>&1; then
+        detected_compute_capability="$(nvidia-smi --query-gpu=compute_cap --format=csv,noheader 2>/dev/null | sed -n '1p' | tr -d '[:space:]' || true)"
+    fi
+    # 8.9 is the safe fallback for the RTX 4090 development host.  Systems
+    # with a visible NVIDIA GPU use their queried capability instead, so the
+    # same manifest also builds native Blackwell (12.0) extension binaries.
+    export TORCH_CUDA_ARCH_LIST="${detected_compute_capability:-8.9}"
+fi
 export MAX_JOBS="${MAX_JOBS:-1}"

@@ -43,8 +43,8 @@ optuna = ">=4, <5"
 [tasks]
 submodules = "git submodule sync --recursive && git submodule update --init --recursive"
 patch-diff-triangle = { cmd = "bash scripts/patch_diff_triangle_cstdint.sh", depends-on = ["submodules"] }
-install-diff-triangle = { cmd = "TORCH_CUDA_ARCH_LIST=8.9 bash scripts/install_diff_triangle.sh", depends-on = ["submodules"] }
-install-simple-knn = { cmd = "python -c \"import shutil; shutil.rmtree('submodules/simple-knn/build', ignore_errors=True)\" && TORCH_CUDA_ARCH_LIST=8.9 python -m pip install --force-reinstall --no-build-isolation ./submodules/simple-knn", depends-on = ["submodules"] }
+install-diff-triangle = { cmd = "bash scripts/install_diff_triangle.sh", depends-on = ["submodules"] }
+install-simple-knn = { cmd = "bash scripts/install_simple_knn.sh", depends-on = ["submodules"] }
 install-extensions = { cmd = "python -c \"import diff_triangle_rasterization, simple_knn._C; print('extensions ok')\"", depends-on = ["install-diff-triangle", "install-simple-knn"] }
 verify = "python scripts/verify_environment.py"
 smoke = { cmd = "python scripts/verify_environment.py --extensions", depends-on = ["install-extensions"] }
